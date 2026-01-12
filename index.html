@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-
 <meta name="viewport"
   content="width=device-width,
            initial-scale=1.0,
@@ -11,101 +10,122 @@
            viewport-fit=cover">
 
 <title>Dice Game</title>
-
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
 <style>
 html, body {
   margin: 0;
   padding: 0;
-  height: 100%;
-  background: #0f172a;
+  background: #0b1220;
   color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* 🔥 关键：全屏，不限宽 */
 #app {
   min-height: 100vh;
-  max-width: 420px;
-  margin: 0 auto;
-  padding: 20px 16px env(safe-area-inset-bottom);
+  padding: 20px 14px env(safe-area-inset-bottom);
   box-sizing: border-box;
   text-align: center;
 }
 
 /* 标题 */
 h1 {
-  margin: 10px 0 5px;
   font-size: 22px;
+  margin: 10px 0 6px;
 }
 
 #balance {
   opacity: .85;
-  margin-bottom: 15px;
+  margin-bottom: 14px;
 }
 
-/* 下注按钮 */
+/* 下注 */
 .bet-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   gap: 8px;
-  margin-bottom: 12px;
 }
 
 .bet {
   background: #22c55e;
   color: #000;
-  border-radius: 8px;
   padding: 10px 0;
-  font-size: 14px;
+  border-radius: 8px;
   font-weight: 600;
-  cursor: pointer;
 }
 
 .bet.custom {
   background: #facc15;
 }
 
-/* Roll 按钮 */
-#rollBtn {
-  margin: 15px auto;
-  padding: 12px 26px;
+/* Roll */
+#roll {
+  margin: 16px auto;
+  width: 100%;
+  max-width: 320px;
+  padding: 14px;
   background: #38bdf8;
-  border-radius: 10px;
   color: #000;
+  border-radius: 12px;
   font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
+  font-weight: 700;
 }
 
-/* 骰子区 */
+/* 🎲 骰子区 */
 .dice-area {
+  margin-top: 26px;
   display: flex;
   justify-content: center;
-  gap: 24px;
-  margin: 20px 0;
+  gap: 36px;
+  min-height: 120px;
 }
 
-/* SVG 骰子动画 */
+/* 🎲 Telegram 风格骰子 */
 .dice {
-  width: 80px;
-  height: 80px;
-  animation: none;
+  width: 96px;
+  height: 96px;
+  background: #f1f5f9;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  box-shadow:
+    0 18px 30px rgba(0,0,0,.45),
+    inset 0 -6px 12px rgba(0,0,0,.12);
+  transform: scale(0);
 }
 
-.roll-anim {
-  animation: spin 0.9s ease-in-out;
+/* 点 */
+.dot {
+  width: 10px;
+  height: 10px;
+  background: #111;
+  border-radius: 50%;
 }
 
-@keyframes spin {
-  0% { transform: rotate(0deg) scale(1); }
-  50% { transform: rotate(360deg) scale(1.15); }
-  100% { transform: rotate(720deg) scale(1); }
+/* 点位布局 */
+.face {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  grid-template-rows: repeat(3,1fr);
+  padding: 18px;
 }
 
-/* 结果 */
+/* 🎯 动画（高仿 Telegram） */
+.show {
+  animation: drop 0.65s cubic-bezier(.17,.89,.32,1.49) forwards;
+}
+
+@keyframes drop {
+  0%   { transform: scale(0) rotate(-90deg); opacity: 0; }
+  60%  { transform: scale(1.15) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
 #result {
-  margin-top: 10px;
+  margin-top: 16px;
   font-size: 15px;
   white-space: pre-line;
 }
@@ -118,13 +138,13 @@ h1 {
 <h1 id="title"></h1>
 <div id="balance"></div>
 
-<div class="bet-grid" id="betGrid"></div>
+<div class="bet-grid" id="bets"></div>
 
-<div id="rollBtn">🎲 Roll</div>
+<div id="roll">🎲 Roll</div>
 
 <div class="dice-area">
-  <div id="playerDice"></div>
-  <div id="bankerDice"></div>
+  <div id="player"></div>
+  <div id="banker"></div>
 </div>
 
 <div id="result"></div>
@@ -132,151 +152,85 @@ h1 {
 </div>
 
 <script>
-/* ================= Telegram Init ================= */
 const tg = Telegram.WebApp;
-tg.ready();
-tg.expand();
-tg.enableClosingConfirmation();
+tg.ready(); tg.expand();
 
-/* ================= I18N ================= */
+/* 🌐 三语 */
 const I18N = {
-  zh: {
-    title: "🎲 骰子游戏（比大小）",
-    balance: "余额",
-    bet_ok: "✅ 已下注",
-    roll_first: "请先下注",
-    win: "🏆 玩家胜利",
-    lose: "❌ 玩家失败",
-    draw: "🤝 平局"
-  },
-  en: {
-    title: "🎲 Dice Game (Big / Small)",
-    balance: "Balance",
-    bet_ok: "✅ Bet placed",
-    roll_first: "Please place a bet",
-    win: "🏆 You Win",
-    lose: "❌ You Lose",
-    draw: "🤝 Draw"
-  },
-  ms: {
-    title: "🎲 Permainan Dadu (Besar / Kecil)",
-    balance: "Baki",
-    bet_ok: "✅ Pertaruhan diterima",
-    roll_first: "Sila buat pertaruhan",
-    win: "🏆 Anda Menang",
-    lose: "❌ Anda Kalah",
-    draw: "🤝 Seri"
-  }
+  zh:{title:"🎲 骰子游戏（比大小）",balance:"余额",bet:"已下注",rollFirst:"请先下注",win:"🏆 玩家胜利",lose:"❌ 玩家失败",draw:"🤝 平局"},
+  en:{title:"🎲 Dice Game (Big / Small)",balance:"Balance",bet:"Bet placed",rollFirst:"Place bet first",win:"🏆 You Win",lose:"❌ You Lose",draw:"🤝 Draw"},
+  ms:{title:"🎲 Permainan Dadu",balance:"Baki",bet:"Pertaruhan diterima",rollFirst:"Sila buat pertaruhan",win:"🏆 Menang",lose:"❌ Kalah",draw:"🤝 Seri"}
 };
 
-function detectLang() {
-  const code = tg.initDataUnsafe?.user?.language_code || "en";
-  if (code.startsWith("zh")) return "zh";
-  if (code.startsWith("ms")) return "ms";
-  return "en";
-}
+const lang = (tg.initDataUnsafe?.user?.language_code || "en").startsWith("zh")?"zh":
+             (tg.initDataUnsafe?.user?.language_code || "").startsWith("ms")?"ms":"en";
+const T = I18N[lang];
 
-const LANG = detectLang();
-const T = I18N[LANG];
-
-/* ================= Game State ================= */
 let balance = 1000;
-let betAmount = 0;
+let bet = 0;
 
-const betValues = [1,2,5,10,15,30,50,100,150,300,500];
-
-/* ================= UI Init ================= */
 document.getElementById("title").innerText = T.title;
 updateBalance();
 
-const betGrid = document.getElementById("betGrid");
-betValues.forEach(v => {
-  const b = document.createElement("div");
-  b.className = "bet";
-  b.innerText = v;
-  b.onclick = () => placeBet(v);
-  betGrid.appendChild(b);
+/* 下注按钮 */
+const values=[1,2,5,10,15,30,50,100,150,300,500];
+const bets=document.getElementById("bets");
+values.forEach(v=>{
+  const b=document.createElement("div");
+  b.className="bet";
+  b.innerText=v;
+  b.onclick=()=>{bet=v;result(`${T.bet}: ${v}`)};
+  bets.appendChild(b);
 });
+const c=document.createElement("div");
+c.className="bet custom";c.innerText="✏️";
+c.onclick=()=>{const v=prompt("Amount");if(v)bet=+v};
+bets.appendChild(c);
 
-const custom = document.createElement("div");
-custom.className = "bet custom";
-custom.innerText = "✏️";
-custom.onclick = () => {
-  const v = prompt("Enter amount:");
-  if (v && !isNaN(v)) placeBet(Number(v));
-};
-betGrid.appendChild(custom);
-
-/* ================= Dice SVG ================= */
-function diceSVG(num) {
-  return `
-<svg class="dice" viewBox="0 0 100 100">
-<rect x="5" y="5" width="90" height="90" rx="16" fill="#e5e7eb"/>
-${dots(num)}
-</svg>`;
-}
-
-function dots(n) {
-  const pos = {
-    1:[[50,50]],
-    2:[[30,30],[70,70]],
-    3:[[30,30],[50,50],[70,70]],
-    4:[[30,30],[70,30],[30,70],[70,70]],
-    5:[[30,30],[70,30],[50,50],[30,70],[70,70]],
-    6:[[30,30],[70,30],[30,50],[70,50],[30,70],[70,70]]
-  };
-  return pos[n].map(p=>`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="#111"/>`).join("");
-}
-
-/* ================= Logic ================= */
-function updateBalance() {
-  document.getElementById("balance").innerText =
-    `${T.balance}: ${balance}`;
-}
-
-function placeBet(v) {
-  betAmount = v;
-  document.getElementById("result").innerText =
-    `${T.bet_ok}: ${v}`;
-}
-
-document.getElementById("rollBtn").onclick = async () => {
-  if (!betAmount) {
-    document.getElementById("result").innerText = T.roll_first;
-    return;
-  }
-
-  const p = Math.floor(Math.random()*6)+1;
-  const b = Math.floor(Math.random()*6)+1;
-
-  const pd = document.getElementById("playerDice");
-  const bd = document.getElementById("bankerDice");
-
-  pd.innerHTML = diceSVG(p);
-  pd.firstChild.classList.add("roll-anim");
-  await sleep(900);
-
-  bd.innerHTML = diceSVG(b);
-  bd.firstChild.classList.add("roll-anim");
-  await sleep(900);
+document.getElementById("roll").onclick=async()=>{
+  if(!bet){result(T.rollFirst);return;}
+  const p=r(), b=r();
+  show("player",p); await wait(600);
+  show("banker",b); await wait(300);
 
   let res;
-  if (p > b) { balance += betAmount; res = T.win; }
-  else if (p < b) { balance -= betAmount; res = T.lose; }
-  else res = T.draw;
+  if(p>b){balance+=bet;res=T.win;}
+  else if(p<b){balance-=bet;res=T.lose;}
+  else res=T.draw;
 
-  betAmount = 0;
-  updateBalance();
-
-  document.getElementById("result").innerText =
-    `🎲 玩家: ${p}\n🎲 庄家: ${b}\n\n${res}`;
+  bet=0; updateBalance();
+  result(`🎲 玩家: ${p}\n🎲 庄家: ${b}\n\n${res}`);
 };
 
-function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
-</script>
+function r(){return Math.floor(Math.random()*6)+1;}
+function updateBalance(){document.getElementById("balance").innerText=`${T.balance}: ${balance}`;}
+function result(t){document.getElementById("result").innerText=t;}
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
 
+/* 🎲 生成骰子 */
+function show(id,n){
+  const d=document.getElementById(id);
+  d.innerHTML="";
+  const box=document.createElement("div");
+  box.className="dice show";
+  const face=document.createElement("div");
+  face.className="face";
+  const map={
+    1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],
+    5:[0,2,4,6,8],6:[0,2,3,5,6,8]
+  };
+  for(let i=0;i<9;i++){
+    const s=document.createElement("div");
+    if(map[n].includes(i)){s.className="dot";}
+    face.appendChild(s);
+  }
+  box.appendChild(face);
+  d.appendChild(box);
+}
+</script>
 </body>
 </html>
+
 
 
 
