@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dice WebApp</title>
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #0f172a;
+      color: #fff;
+      text-align: center;
+      padding: 40px;
+    }
+    button {
+      padding: 14px 24px;
+      font-size: 18px;
+      border-radius: 8px;
+      border: none;
+      background: #22c55e;
+      color: #000;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1 id="title">🎲 Dice WebApp</h1>
+  <p id="lang"></p>
+
+  <button onclick="test()">Test WebApp</button>
+
+  <script>
+    const tg = Telegram.WebApp;
+    tg.ready();
+
+    const lang = tg.initDataUnsafe?.user?.language_code || "en";
+    document.getElementById("lang").innerText =
+      "Telegram language: " + lang;
+
+    function test() {
+      tg.showAlert("WebApp works!");
+    }
+  </script>
+
+</body>
+</html>
