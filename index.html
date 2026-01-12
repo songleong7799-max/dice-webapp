@@ -1,50 +1,156 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Dice WebApp</title>
+<meta charset="UTF-8" />
+<title>Dice WebApp</title>
 
-  <!-- Telegram WebApp SDK -->
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
 
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #0f172a;
-      color: #fff;
-      text-align: center;
-      padding: 40px;
-    }
-    button {
-      padding: 14px 24px;
-      font-size: 18px;
-      border-radius: 8px;
-      border: none;
-      background: #22c55e;
-      color: #000;
-      cursor: pointer;
-    }
-  </style>
+<style>
+body {
+  background: #0f172a;
+  color: #fff;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  padding: 30px;
+}
+button {
+  padding: 12px 20px;
+  margin: 6px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.bet { background: #22c55e; color: #000; }
+.roll { background: #38bdf8; color: #000; }
+</style>
 </head>
+
 <body>
 
-  <h1 id="title">🎲 Dice WebApp</h1>
-  <p id="lang"></p>
+<h2 id="title"></h2>
+<p id="balance"></p>
 
-  <button onclick="test()">Test WebApp</button>
+<div id="bet-area">
+  <button class="bet" onclick="bet(10)">10</button>
+  <button class="bet" onclick="bet(20)">20</button>
+  <button class="bet" onclick="bet(50)">50</button>
+</div>
 
-  <script>
-    const tg = Telegram.WebApp;
-    tg.ready();
+<div>
+  <button class="roll" onclick="roll()">🎲 Roll</button>
+</div>
 
-    const lang = tg.initDataUnsafe?.user?.language_code || "en";
-    document.getElementById("lang").innerText =
-      "Telegram language: " + lang;
+<pre id="result"></pre>
 
-    function test() {
-      tg.showAlert("WebApp works!");
-    }
-  </script>
+<script>
+/* ======================
+   Telegram Init
+====================== */
+const tg = Telegram.WebApp;
+tg.ready();
+
+/* ======================
+   三语字典
+====================== */
+const I18N = {
+  zh: {
+    title: "🎲 骰子游戏（Game1）",
+    balance: "余额",
+    bet_ok: "✅ 已下注",
+    roll_first: "请先下注",
+    win: "🏆 玩家胜利",
+    lose: "❌ 玩家失败",
+    draw: "🤝 平局"
+  },
+  en: {
+    title: "🎲 Dice Game (Game1)",
+    balance: "Balance",
+    bet_ok: "✅ Bet placed",
+    roll_first: "Please place a bet",
+    win: "🏆 You Win",
+    lose: "❌ You Lose",
+    draw: "🤝 Draw"
+  },
+  ms: {
+    title: "🎲 Permainan Dadu (Game1)",
+    balance: "Baki",
+    bet_ok: "✅ Pertaruhan diterima",
+    roll_first: "Sila buat pertaruhan",
+    win: "🏆 Anda Menang",
+    lose: "❌ Anda Kalah",
+    draw: "🤝 Seri"
+  }
+};
+
+/* ======================
+   语言自动识别
+====================== */
+function detectLang() {
+  const code = tg.initDataUnsafe?.user?.language_code || "en";
+  if (code.startsWith("zh")) return "zh";
+  if (code.startsWith("ms")) return "ms";
+  return "en";
+}
+
+const LANG = detectLang();
+const T = I18N[LANG];
+
+/* ======================
+   Game1 状态
+====================== */
+let balance = 1000;
+let currentBet = 0;
+
+/* ======================
+   UI 初始化
+====================== */
+document.getElementById("title").innerText = T.title;
+updateBalance();
+
+/* ======================
+   Game1 逻辑
+====================== */
+function updateBalance() {
+  document.getElementById("balance").innerText =
+    `${T.balance}: ${balance}`;
+}
+
+function bet(amount) {
+  currentBet = amount;
+  document.getElementById("result").innerText =
+    `${T.bet_ok}: ${amount}`;
+}
+
+function roll() {
+  if (!currentBet) {
+    document.getElementById("result").innerText = T.roll_first;
+    return;
+  }
+
+  const player = Math.floor(Math.random() * 6) + 1;
+  const banker = Math.floor(Math.random() * 6) + 1;
+
+  let res;
+  if (player > banker) {
+    balance += currentBet;
+    res = T.win;
+  } else if (player < banker) {
+    balance -= currentBet;
+    res = T.lose;
+  } else {
+    res = T.draw;
+  }
+
+  currentBet = 0;
+  updateBalance();
+
+  document.getElementById("result").innerText =
+    `🎲 玩家: ${player}\n🎲 庄家: ${banker}\n\n${res}`;
+}
+</script>
 
 </body>
 </html>
+
